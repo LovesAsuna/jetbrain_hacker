@@ -1,39 +1,10 @@
 package algo
 
 import (
-	"crypto"
-	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha1"
 	"crypto/sha256"
 	"errors"
 )
-
-func GenerateKeyPair(bits int) (*rsa.PrivateKey, error) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, bits)
-	if err != nil {
-		return nil, err
-	}
-	return privateKey, nil
-}
-
-func Sign(licenseContent []byte, privKey *rsa.PrivateKey) []byte {
-	sha := sha1.New()
-	sha.Write(licenseContent)
-	hashed := sha.Sum(nil)
-	signature, err := rsa.SignPKCS1v15(rand.Reader, privKey, crypto.SHA1, hashed)
-	if err != nil {
-		panic(err)
-	}
-	return signature
-}
-
-func Verify(pubKey *rsa.PublicKey, hash crypto.Hash, content, signature []byte) error {
-	instance := hash.New()
-	instance.Write(content)
-	hashed := instance.Sum(nil)
-	return rsa.VerifyPKCS1v15(pubKey, hash, hashed, signature)
-}
 
 // The following code is copied from the standard library
 var hashPrefixes = map[string][]byte{

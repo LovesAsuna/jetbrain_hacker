@@ -1,19 +1,22 @@
 package cert
 
 import (
+	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"github.com/dromara/carbon/v2"
 	"math/big"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
-const JBRootCerStr = `-----BEGIN CERTIFICATE-----
+const JetProfileCertStr = `-----BEGIN CERTIFICATE-----
 MIIFOzCCAyOgAwIBAgIJANJssYOyg3nhMA0GCSqGSIb3DQEBCwUAMBgxFjAUBgNV
 BAMMDUpldFByb2ZpbGUgQ0EwHhcNMTUxMDAyMTEwMDU2WhcNNDUxMDI0MTEwMDU2
 WjAYMRYwFAYDVQQDDA1KZXRQcm9maWxlIENBMIICIjANBgkqhkiG9w0BAQEFAAOC
@@ -44,22 +47,191 @@ X+jTDXbRb+77BP6n41briXhm57AwUI3TqqJFvoiFyx5JvVWG3ZqlVaeU/U9e0gxn
 FeU3FZ+Bcp12t7dlM4E0/sS1XdL47CfGVj4Bp+/VbF862HmkAbd7shs7sDQkHbU=
 -----END CERTIFICATE-----`
 
-var JBRootCer *x509.Certificate
+const LicenseServerCertStr = `-----BEGIN CERTIFICATE-----
+MIIFTDCCAzSgAwIBAgIJAMCrW9HV+hjZMA0GCSqGSIb3DQEBCwUAMB0xGzAZBgNV
+BAMMEkxpY2Vuc2UgU2VydmVycyBDQTAgFw0xNjEwMTIxNDMwNTRaGA8yMTE2MTIy
+NzE0MzA1NFowHTEbMBkGA1UEAwwSTGljZW5zZSBTZXJ2ZXJzIENBMIICIjANBgkq
+hkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAoT7LvHj3JKK2pgc5f02z+xEiJDcvlBi6
+fIwrg/504UaMx3xWXAE5CEPelFty+QPRJnTNnSxqKQQmg2s/5tMJpL9lzGwXaV7a
+rrcsEDbzV4el5mIXUnk77Bm/QVv48s63iQqUjVmvjQt9SWG2J7+h6X3ICRvF1sQB
+yeat/cO7tkpz1aXXbvbAws7/3dXLTgAZTAmBXWNEZHVUTcwSg2IziYxL8HRFOH0+
+GMBhHqa0ySmF1UTnTV4atIXrvjpABsoUvGxw+qOO2qnwe6ENEFWFz1a7pryVOHXg
+P+4JyPkI1hdAhAqT2kOKbTHvlXDMUaxAPlriOVw+vaIjIVlNHpBGhqTj1aqfJpLj
+qfDFcuqQSI4O1W5tVPRNFrjr74nDwLDZnOF+oSy4E1/WhL85FfP3IeQAIHdswNMJ
+y+RdkPZCfXzSUhBKRtiM+yjpIn5RBY+8z+9yeGocoxPf7l0or3YF4GUpud202zgy
+Y3sJqEsZksB750M0hx+vMMC9GD5nkzm9BykJS25hZOSsRNhX9InPWYYIi6mFm8QA
+2Dnv8wxAwt2tDNgqa0v/N8OxHglPcK/VO9kXrUBtwCIfZigO//N3hqzfRNbTv/ZO
+k9lArqGtcu1hSa78U4fuu7lIHi+u5rgXbB6HMVT3g5GQ1L9xxT1xad76k2EGEi3F
+9B+tSrvru70CAwEAAaOBjDCBiTAdBgNVHQ4EFgQUpsRiEz+uvh6TsQqurtwXMd4J
+8VEwTQYDVR0jBEYwRIAUpsRiEz+uvh6TsQqurtwXMd4J8VGhIaQfMB0xGzAZBgNV
+BAMMEkxpY2Vuc2UgU2VydmVycyBDQYIJAMCrW9HV+hjZMAwGA1UdEwQFMAMBAf8w
+CwYDVR0PBAQDAgEGMA0GCSqGSIb3DQEBCwUAA4ICAQCJ9+GQWvBS3zsgPB+1PCVc
+oG6FY87N6nb3ZgNTHrUMNYdo7FDeol2DSB4wh/6rsP9Z4FqVlpGkckB+QHCvqU+d
+rYPe6QWHIb1kE8ftTnwapj/ZaBtF80NWUfYBER/9c6To5moW63O7q6cmKgaGk6zv
+St2IhwNdTX0Q5cib9ytE4XROeVwPUn6RdU/+AVqSOspSMc1WQxkPVGRF7HPCoGhd
+vqebbYhpahiMWfClEuv1I37gJaRtsoNpx3f/jleoC/vDvXjAznfO497YTf/GgSM2
+LCnVtpPQQ2vQbOfTjaBYO2MpibQlYpbkbjkd5ZcO5U5PGrQpPFrWcylz7eUC3c05
+UVeygGIthsA/0hMCioYz4UjWTgi9NQLbhVkfmVQ5lCVxTotyBzoubh3FBz+wq2Qt
+iElsBrCMR7UwmIu79UYzmLGt3/gBdHxaImrT9SQ8uqzP5eit54LlGbvGekVdAL5l
+DFwPcSB1IKauXZvi1DwFGPeemcSAndy+Uoqw5XGRqE6jBxS7XVI7/4BSMDDRBz1u
+a+JMGZXS8yyYT+7HdsybfsZLvkVmc9zVSDI7/MjVPdk6h0sLn+vuPC1bIi5edoNy
+PdiG2uPH5eDO6INcisyPpLS4yFKliaO4Jjap7yzLU9pbItoWgCAYa2NpxuxHJ0tB
+7tlDFnvaRnQukqSG+VqNWg==
+-----END CERTIFICATE-----`
+
+var (
+	JetProfileCert    *Certificate
+	LicenseServerCert *Certificate
+)
 
 func init() {
 	var err error
-	JBRootCer, err = CreateCertFromPem([]byte(JBRootCerStr))
+	JetProfileCert, err = CreateCertFromPem([]byte(JetProfileCertStr))
+	if err != nil {
+		panic(err)
+	}
+	LicenseServerCert, err = CreateCertFromPem([]byte(LicenseServerCertStr))
 	if err != nil {
 		panic(err)
 	}
 }
 
-func GenerateCertificate(ca *x509.Certificate, caPrivateKey, userPrivateKey *rsa.PrivateKey, commonName string, signatureAlgorithm x509.SignatureAlgorithm) ([]byte, error) {
-	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+type Certificate struct {
+	parent     *Certificate
+	cert       *x509.Certificate
+	privateKey *rsa.PrivateKey
+}
+
+func (c *Certificate) WriteCertToFile(path string) error {
+	if c.cert == nil {
+		return errors.New("certificate is nil")
+	}
+	certificatePEM := &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: c.cert.Raw,
+	}
+	bytes := pem.EncodeToMemory(certificatePEM)
+	dir := filepath.Dir(path)
+	_ = os.MkdirAll(dir, 0750)
+	return os.WriteFile(path, bytes, 0666)
+}
+
+func (c *Certificate) WritePrivateKeyToFile(path string) error {
+	if c.privateKey == nil {
+		return errors.New("private key is nil")
+	}
+	privateKeyPEM := &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(c.privateKey),
+	}
+	bytes := pem.EncodeToMemory(privateKeyPEM)
+	dir := filepath.Dir(path)
+	_ = os.MkdirAll(dir, 0750)
+	return os.WriteFile(path, bytes, 0666)
+}
+
+func (c *Certificate) Sign(hashAlgo crypto.Hash, content []byte) ([]byte, error) {
+	if c.privateKey == nil {
+		return nil, errors.New("private key is nil")
+	}
+	sha := hashAlgo.New()
+	sha.Write(content)
+	hashed := sha.Sum(nil)
+	return rsa.SignPKCS1v15(rand.Reader, c.privateKey, hashAlgo, hashed)
+}
+
+func (c *Certificate) SignBase64(hashAlgo crypto.Hash, content []byte) (string, error) {
+	signature, err := c.Sign(hashAlgo, content)
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(signature), nil
+}
+
+func (c *Certificate) Verify(hashAlgo crypto.Hash, content, signature []byte) error {
+	sha := hashAlgo.New()
+	sha.Write(content)
+	hashed := sha.Sum(nil)
+	return rsa.VerifyPKCS1v15(c.PublicKey(), hashAlgo, hashed, signature)
+}
+
+func (c *Certificate) RawTBS() ([]byte, error) {
+	if c.cert == nil {
+		return nil, errors.New("certificate is nil")
+	}
+	return c.cert.RawTBSCertificate, nil
+}
+
+func (c *Certificate) Raw() ([]byte, error) {
+	if c.cert == nil {
+		return nil, errors.New("certificate is nil")
+	}
+	return c.cert.Raw, nil
+}
+
+func (c *Certificate) RawBase64() (string, error) {
+	raw, err := c.Raw()
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(raw), nil
+}
+
+func (c *Certificate) CommonName() string {
+	if c.cert == nil {
+		return ""
+	}
+	return c.cert.Subject.CommonName
+}
+
+func (c *Certificate) Signature() []byte {
+	if c.cert == nil {
+		return nil
+	}
+	return c.cert.Signature
+}
+
+func (c *Certificate) PublicKey() *rsa.PublicKey {
+	if c.privateKey != nil {
+		return &c.privateKey.PublicKey
+	}
+	if c.cert != nil {
+		return c.cert.PublicKey.(*rsa.PublicKey)
+	}
+	return nil
+}
+
+func (c *Certificate) PrivateKey() *rsa.PrivateKey {
+	if c.privateKey == nil {
+		return nil
+	}
+	return c.privateKey
+}
+
+func GenerateFakeCertificate(parentCommonName, commonName, certPath, keyPath string) (*Certificate, error) {
+	parentCert, err := GenerateCertificate(parentCommonName, nil)
 	if err != nil {
 		return nil, err
 	}
+	cert, err := GenerateCertificate(commonName, parentCert)
+	if err != nil {
+		return nil, err
+	}
+	if certPath != "" {
+		if err = cert.WriteCertToFile(certPath); err != nil {
+			return nil, err
+		}
+	}
+	if keyPath != "" {
+		if err = cert.WritePrivateKeyToFile(keyPath); err != nil {
+			return nil, err
+		}
+	}
+	return cert, nil
+}
 
+func GenerateCertificate(commonName string, parent *Certificate) (*Certificate, error) {
+	serialNumber, _ := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
 	template := &x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
@@ -67,49 +239,72 @@ func GenerateCertificate(ca *x509.Certificate, caPrivateKey, userPrivateKey *rsa
 		},
 		NotBefore:          carbon.Now().StdTime(),
 		NotAfter:           carbon.Now().AddYears(2).StdTime(),
-		SignatureAlgorithm: signatureAlgorithm,
+		SignatureAlgorithm: x509.SHA256WithRSA,
 	}
 
 	var (
-		parent *x509.Certificate
-		pub    *rsa.PublicKey
-		priv   *rsa.PrivateKey
+		parentTemplate   *x509.Certificate
+		parentPrivateKey *rsa.PrivateKey
 	)
-	if ca == nil || caPrivateKey == nil {
-		//template.BasicConstraintsValid = true
-		//template.IsCA = true
-		parent = template
-		pub = &userPrivateKey.PublicKey
-		priv = userPrivateKey
-	} else {
-		parent = ca
-		pub = &userPrivateKey.PublicKey
-		priv = caPrivateKey
-	}
-	certificateBytes, err := x509.CreateCertificate(rand.Reader, template, parent, pub, priv)
+
+	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
 		return nil, err
 	}
-
-	return certificateBytes, nil
+	if parent == nil {
+		//template.BasicConstraintsValid = true
+		//template.IsCA = true
+		parentTemplate = template
+		parentPrivateKey = privateKey
+	} else {
+		parentTemplate = parent.cert
+		parentPrivateKey = parent.privateKey
+	}
+	certBytes, err := x509.CreateCertificate(rand.Reader, template, parentTemplate, &privateKey.PublicKey, parentPrivateKey)
+	if err != nil {
+		return nil, err
+	}
+	cert, err := x509.ParseCertificate(certBytes)
+	if err != nil {
+		return nil, err
+	}
+	certificate := &Certificate{
+		parent:     parent,
+		cert:       cert,
+		privateKey: privateKey,
+	}
+	if parent == nil {
+		certificate.parent = certificate
+	}
+	return certificate, nil
 }
 
 const PemPrefix = "-----"
 
-func MustCreateCertFromFile(path string) *x509.Certificate {
-	cert, err := CreateCertFromFile(path)
+func MustCreateCertFromFile(certPath, keyPath string) *Certificate {
+	cert, err := CreateCertFromFile(certPath, keyPath)
 	if err != nil {
 		panic(err)
 	}
 	return cert
 }
 
-func CreateCertFromFile(path string) (*x509.Certificate, error) {
-	certBytes, err := os.ReadFile(path)
+func CreateCertFromFile(certPath, keyPath string) (cert *Certificate, err error) {
+	if cert, err = CreateCertFromFileWithoutPrivateKey(certPath); err != nil {
+		return
+	}
+	if cert.privateKey, err = CreatePrivateKeyFromFile(keyPath); err != nil {
+		return nil, err
+	}
+	return cert, nil
+}
+
+func CreateCertFromFileWithoutPrivateKey(certPath string) (*Certificate, error) {
+	certBytes, err := os.ReadFile(certPath)
 	if err != nil {
 		return nil, err
 	}
-	var cert *x509.Certificate
+	var cert *Certificate
 	if strings.HasPrefix(string(certBytes[:len(PemPrefix)]), PemPrefix) {
 		cert, err = CreateCertFromPem(certBytes)
 	} else {
@@ -122,15 +317,7 @@ func CreateCertFromFile(path string) (*x509.Certificate, error) {
 	return cert, nil
 }
 
-func MustCreateRsaKeyFromFile(path string) *rsa.PrivateKey {
-	key, err := CreateRsaKeyFromFile(path)
-	if err != nil {
-		panic(err)
-	}
-	return key
-}
-
-func CreateRsaKeyFromFile(path string) (*rsa.PrivateKey, error) {
+func CreatePrivateKeyFromFile(path string) (*rsa.PrivateKey, error) {
 	keyBytes, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -147,7 +334,7 @@ func CreateRsaKeyFromFile(path string) (*rsa.PrivateKey, error) {
 	return key, nil
 }
 
-func CreateCertFromPem(bytes []byte) (*x509.Certificate, error) {
+func CreateCertFromPem(bytes []byte) (*Certificate, error) {
 	block, _ := pem.Decode(bytes)
 	return CreateCertFromDer(block.Bytes)
 }
@@ -157,12 +344,14 @@ func CreatePrivateKeyFromPem(bytes []byte) (*rsa.PrivateKey, error) {
 	return CreatePrivateKeyFromDer(block.Bytes)
 }
 
-func CreateCertFromDer(bytes []byte) (*x509.Certificate, error) {
+func CreateCertFromDer(bytes []byte) (*Certificate, error) {
 	cert, err := x509.ParseCertificate(bytes)
 	if err != nil {
 		return nil, err
 	}
-	return cert, nil
+	return &Certificate{
+		cert: cert,
+	}, nil
 }
 
 func CreatePrivateKeyFromDer(bytes []byte) (*rsa.PrivateKey, error) {

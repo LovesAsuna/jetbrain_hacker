@@ -20,11 +20,24 @@ var buildConfigCmd = &cobra.Command{
 			fmt.Println(config.BuildUrlConfig())
 			return nil
 		case "power":
-			userCert, err := cert.CreateCertFromFile(cmd.Flag("user-cert").Value.String())
+			userCert, err := cert.CreateCertFromFileWithoutPrivateKey(cmd.Flag("user-cert").Value.String())
 			if err != nil {
 				return err
 			}
-			fmt.Println(config.BuildPowerConfig(userCert, cert.JBRootCer))
+			licenseServerCert, err := cert.CreateCertFromFileWithoutPrivateKey(cmd.Flag("license-server-cert").Value.String())
+			if err != nil {
+				return err
+			}
+			fmt.Println(
+				config.BuildPowerConfig(
+					[2]*cert.Certificate{
+						userCert, cert.JetProfileCert,
+					},
+					[2]*cert.Certificate{
+						licenseServerCert, cert.LicenseServerCert,
+					},
+				),
+			)
 		default:
 			fmt.Println("unknown config type.")
 		}
@@ -36,5 +49,4 @@ func init() {
 	rootCmd.AddCommand(buildConfigCmd)
 
 	buildConfigCmd.Flags().StringP("type", "t", "power", "If empty use power. Possible values: 'power', 'dns', 'url'.")
-	buildConfigCmd.Flags().StringP("user-cert", "c", "./user.cer", "Path to store the user cer when building power config.")
 }
