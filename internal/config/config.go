@@ -1,34 +1,39 @@
 package config
 
 import (
-	"crypto/rsa"
-	"crypto/x509"
+	"fmt"
 	"github.com/LovesAsuna/jetbrains_hacker/internal/algo"
+	"github.com/LovesAsuna/jetbrains_hacker/internal/cert"
 	"math/big"
 	"strings"
 )
 
-func BuildPowerConfig(userCert, rootCert *x509.Certificate) string {
-	builder := new(strings.Builder)
-	builder.WriteString("[Result]\n")
-	builder.WriteString("EQUAL,")
-	bi := new(big.Int)
-	bi.SetBytes(userCert.Signature)
-	builder.WriteString(bi.String())
-	builder.WriteString(",65537,")
-	bi = new(big.Int)
-	bi.SetBytes(rootCert.PublicKey.(*rsa.PublicKey).N.Bytes())
-	builder.WriteString(bi.String())
-	builder.WriteString("->")
-	bi = new(big.Int)
-	em, err := algo.GetEM(rootCert.PublicKey.(*rsa.PublicKey), userCert.RawTBSCertificate)
-	if err != nil {
-		panic(err)
+func BuildPowerConfig(certs ...[2]*cert.Certificate) string {
+	lines := make([]string, 0, 4)
+	lines = append(lines, "[Result]")
+	for _, certPair := range certs {
+		var (
+			x, z, r        string
+			y              int
+			subCert        = certPair[0]
+			realParentCert = certPair[1]
+		)
+		bi := new(big.Int)
+		bi.SetBytes(subCert.Signature())
+		x = bi.String()
+		y = subCert.PublicKey().E
+		z = realParentCert.PublicKey().N.String()
+		bi = new(big.Int)
+		subCertRawTBS, _ := subCert.RawTBS()
+		em, err := algo.GetEM(cert.JetProfileCert.PublicKey(), subCertRawTBS)
+		if err != nil {
+			continue
+		}
+		bi.SetBytes(em)
+		r = bi.String()
+		lines = append(lines, fmt.Sprintf("EQUAL,%s,%d,%s->%s", x, y, z, r))
 	}
-	bi.SetBytes(em)
-	builder.WriteString(bi.String())
-	builder.WriteString("\n\n[Args]")
-	return builder.String()
+	return strings.Join(lines, "\n")
 }
 
 func BuildDnsConfig() string {
