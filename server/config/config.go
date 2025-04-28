@@ -4,6 +4,7 @@ var Config *ServerConfig
 
 type ServerConfig struct {
 	Addr                        string
+	Licensee                    string
 	UserCertPath                string
 	UserPrivateKeyPath          string
 	LicenseServerCertPath       string

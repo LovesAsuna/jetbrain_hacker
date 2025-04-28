@@ -2,6 +2,8 @@ package handler
 
 import (
 	"fmt"
+	"github.com/LovesAsuna/jetbrains_hacker/internal/util"
+	"github.com/LovesAsuna/jetbrains_hacker/server/config"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -40,6 +42,10 @@ func NewObtainTicketResponse(context *gin.Context) (*ObtainTicketResponse, error
 	helper := NewHelper(context.Value(CertPoolKey).(*CertPool))
 	serverUid := helper.GetServerUid()
 	serverLease := "4102415999000:" + serverUid
+	licensee := config.Config.Licensee
+	if licensee == "" {
+		licensee = baseRequest.UserName
+	}
 	return &ObtainTicketResponse{
 		Helper:             helper,
 		Action:             "NONE",
@@ -51,8 +57,8 @@ func NewObtainTicketResponse(context *gin.Context) (*ObtainTicketResponse, error
 		Salt:               baseRequest.Salt,
 		ServerLease:        serverLease,
 		ServerUid:          serverUid,
-		TicketID:           "666",
-		TicketProperties:   fmt.Sprintf("licensee=%s", baseRequest.UserName),
+		TicketID:           util.GetRandomString(10),
+		TicketProperties:   fmt.Sprintf("licensee=%s", licensee),
 		ValidationDeadline: -1,
 		ValidationPeriod:   60000000,
 	}, nil
