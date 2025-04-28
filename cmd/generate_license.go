@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"github.com/LovesAsuna/jetbrains_hacker/internal/cert"
 	"github.com/LovesAsuna/jetbrains_hacker/internal/license"
+	"github.com/LovesAsuna/jetbrains_hacker/internal/util"
 	"github.com/dromara/carbon/v2"
 	"github.com/spf13/cobra"
-	"math/rand"
 	"strings"
 )
 
@@ -44,23 +44,10 @@ var generateLicenseCmd = &cobra.Command{
 	},
 }
 
-const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-
-func GetRandomString(length int) string {
-	if length <= 0 {
-		return ""
-	}
-	bytes := make([]byte, length)
-	for i := 0; i < length; i++ {
-		bytes[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(bytes)
-}
-
 func init() {
 	rootCmd.AddCommand(generateLicenseCmd)
 
-	generateLicenseCmd.Flags().String("licenseId", GetRandomString(10), "Id of license.")
+	generateLicenseCmd.Flags().String("licenseId", util.GetRandomString(10), "Id of license.")
 	generateLicenseCmd.Flags().String("name", "user", "The licensee name of license.")
 	generateLicenseCmd.Flags().String("user", "user", "The assignee name of license.")
 	generateLicenseCmd.Flags().String("email", "i@user.com", "The assignee email of license.")
