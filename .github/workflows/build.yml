@@ -1,0 +1,48 @@
+name: Multi-Platform Build
+
+on: push
+
+jobs:
+  build:
+    name: Build for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            binary_name: jetbrain-hacker_${{ github.ref_name }}_linux_amd64
+          - os: windows-latest
+            platform: windows
+            binary_name: jetbrain-hacker_${{ github.ref_name }}_windows_amd64.exe
+          - os: macos-latest
+            platform: macos
+            binary_name: jetbrain-hacker_${{ github.ref_name }}_darwin_amd64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+
+      - name: Init Go
+        run: go mod tidy
+
+      - name: Build
+        run: go build -v -o ${{ matrix.binary_name }} .
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: ${{ matrix.binary_name }}
+          path: ${{ matrix.binary_name }}
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref_type == 'tag'
+        with:
+          files: ${{ matrix.binary_name }}
