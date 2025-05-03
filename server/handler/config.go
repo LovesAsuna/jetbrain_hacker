@@ -8,15 +8,19 @@ import (
 )
 
 func Config(context *gin.Context) {
-	var html string
-	switch context.Param("type") {
+	var (
+		configText string
+		_type      = context.Param("type")
+	)
+	switch _type {
 	case "dns":
-		html = config.BuildDnsConfig()
+		configText = config.BuildDnsConfig()
 	case "url":
-		html = config.BuildUrlConfig()
+		configText = config.BuildUrlConfig()
 	default:
+		_type = "power"
 		pool := context.Value(CertPoolKey).(*CertPool)
-		html = config.BuildPowerConfig(
+		configText = config.BuildPowerConfig(
 			[2]*cert.Certificate{
 				pool.UserCert, cert.JetProfileCert,
 			},
@@ -25,5 +29,14 @@ func Config(context *gin.Context) {
 			},
 		)
 	}
-	context.HTML(http.StatusOK, "config.html", map[string]string{"content": html})
+	context.JSON(
+		http.StatusOK,
+		struct {
+			Type   string `json:"type"`
+			Config string `json:"config"`
+		}{
+			Type:   _type,
+			Config: configText,
+		},
+	)
 }

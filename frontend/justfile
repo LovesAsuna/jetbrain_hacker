@@ -1,0 +1,15 @@
+frontend: build_frontend
+    #!/bin/env bash
+    source ~/.bashrc
+    bun run build/ &
+
+build_frontend: bun
+    #!/bin/env bash
+    source ~/.bashrc
+    bun install
+    bun run build
+
+bun:
+    #!/bin/env bash
+    curl -fsSL https://bun.sh/install | bash
+    source ~/.bashrc

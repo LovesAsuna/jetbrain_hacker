@@ -5,7 +5,8 @@ WORKDIR /usr/src/jetbrains_hacker
 
 COPY . .
 
-RUN go mod tidy
-RUN go build -v -o jetbrains_hacker
+RUN apt-get update \
+  && apt-get install -y wget curl unzip
 
-CMD ["./jetbrains_hacker", "run-server"]
+RUN curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
+CMD ["just"]

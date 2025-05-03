@@ -1,0 +1,17 @@
+{
+    auto_https disable_certs
+}
+
+:80 {
+    encode gzip
+    handle_path /api/* {
+        reverse_proxy localhost:8080
+    }
+    handle /rpc/* {
+        reverse_proxy localhost:8080
+    }
+    reverse_proxy localhost:3000
+    log {
+        output file /var/log/caddy/caddy.log
+    }
+}
