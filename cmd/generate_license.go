@@ -1,14 +1,17 @@
 package cmd
 
 import (
+	"context"
 	"crypto"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/LovesAsuna/jetbrains_hacker/internal/cert"
 	"github.com/LovesAsuna/jetbrains_hacker/internal/license"
 	"github.com/LovesAsuna/jetbrains_hacker/internal/util"
 	"github.com/dromara/carbon/v2"
+	"github.com/lovesasuna/sync/coroutinegroup"
 	"github.com/spf13/cobra"
 	"strings"
 )
@@ -19,12 +22,17 @@ var generateLicenseCmd = &cobra.Command{
 	Long:  `generate-license.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		licenseId := cmd.Flag("licenseId").Value.String()
+		codes, err := getCodes()
+		if err != nil {
+			return err
+		}
 		license, err := license.Generate(
 			licenseId,
 			cmd.Flag("name").Value.String(),
 			cmd.Flag("user").Value.String(),
 			cmd.Flag("email").Value.String(),
 			cmd.Flag("time").Value.String(),
+			codes...,
 		)
 		if err != nil {
 			return err
@@ -42,6 +50,42 @@ var generateLicenseCmd = &cobra.Command{
 		fmt.Println(l)
 		return nil
 	},
+}
+
+func getCodes() ([]string, error) {
+	var (
+		productCodes []string
+		pluginCodes  []string
+	)
+	group, _ := coroutinegroup.WithContext(context.Background())
+	group.Go(
+		func(ctx context.Context) error {
+			codes, err := license.GetProductCode()
+			if err != nil {
+				return err
+			}
+			productCodes = codes
+			return nil
+		},
+	)
+	group.Go(
+		func(ctx context.Context) error {
+			codes, err := license.GetPluginCode(10000, 0, "")
+			if err != nil {
+				return err
+			}
+			pluginCodes = codes
+			return nil
+		},
+	)
+	errs := group.Wait()
+	if len(errs) > 0 {
+		return nil, errors.Join(errs...)
+	}
+	codes := make([]string, 0, len(productCodes)+len(pluginCodes))
+	codes = append(codes, productCodes...)
+	codes = append(codes, pluginCodes...)
+	return codes, nil
 }
 
 func init() {
