@@ -1,3 +1,4 @@
+<!-- svelte-ignore a11y_invalid_attribute -->
 <div class="error_container">
     <nav class="shelf">
         <a class="book home-page">Home page</a>
@@ -19,15 +20,15 @@
     @import url(https://fonts.googleapis.com/css?family=Dancing+Script:400,700);
 
     .error_container {
-        width: 100vw;
-        height: 100vh;
-        margin: 0;
-        padding: 2rem;
+        height: calc(100vh - 2rem);
+        margin-top: unset;
+        padding-top: 2rem;
         background-color: #446072;
         font-family: monospace;
         color: white;
         overflow: hidden;
     }
+
     h1 {
         margin-top: 2rem;
         text-align: center;
