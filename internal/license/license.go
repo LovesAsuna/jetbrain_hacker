@@ -1,7 +1,12 @@
 package license
 
 import (
+	"crypto"
+	"encoding/base64"
+	"encoding/json"
+	"github.com/LovesAsuna/jetbrains_hacker/internal/cert"
 	"github.com/dromara/carbon/v2"
+	"strings"
 )
 
 type License struct {
@@ -25,7 +30,30 @@ type Product struct {
 	PaidUpTo     string `json:"paidUpTo"`
 }
 
-func Generate(licenseId, licenseeName, assigneeName, assigneeEmail, time string, codes ...string) (*License, error) {
+func GenerateLicenseCode(cert *cert.Certificate, licenseId, licenseeName, assigneeName, assigneeEmail, time string, codes ...string) (string, error) {
+	license, err := GenerateLicense(
+		licenseId,
+		licenseeName,
+		assigneeName,
+		assigneeEmail,
+		time,
+		codes...,
+	)
+	if err != nil {
+		return "", err
+	}
+	licenseJs, _ := json.Marshal(license)
+	licensePartBase64 := base64.StdEncoding.EncodeToString(licenseJs)
+
+	certPartBase64, _ := cert.RawBase64()
+
+	signatureBytes, _ := cert.Sign(crypto.SHA1, licenseJs)
+	signatureBase64 := base64.StdEncoding.EncodeToString(signatureBytes)
+
+	return strings.Join([]string{licenseId, licensePartBase64, signatureBase64, certPartBase64}, "-"), nil
+}
+
+func GenerateLicense(licenseId, licenseeName, assigneeName, assigneeEmail, time string, codes ...string) (*License, error) {
 	fallBackDate := carbon.Now().SetLayout(carbon.DateLayout).String()
 	paidUpTo := carbon.ParseByLayout(time, carbon.DateLayout).String()
 

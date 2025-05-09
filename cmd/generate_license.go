@@ -2,9 +2,6 @@ package cmd
 
 import (
 	"context"
-	"crypto"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/LovesAsuna/jetbrains_hacker/internal/cert"
@@ -13,7 +10,6 @@ import (
 	"github.com/dromara/carbon/v2"
 	"github.com/lovesasuna/sync/coroutinegroup"
 	"github.com/spf13/cobra"
-	"strings"
 )
 
 var generateLicenseCmd = &cobra.Command{
@@ -26,7 +22,8 @@ var generateLicenseCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		license, err := license.Generate(
+		licenseCode, err := license.GenerateLicenseCode(
+			cert.MustCreateCertFromFile(cmd.Flag("user-cert").Value.String(), cmd.Flag("user-key").Value.String()),
 			licenseId,
 			cmd.Flag("name").Value.String(),
 			cmd.Flag("user").Value.String(),
@@ -37,17 +34,7 @@ var generateLicenseCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		licenseJs, _ := json.Marshal(license)
-		licensePartBase64 := base64.StdEncoding.EncodeToString(licenseJs)
-
-		userCert := cert.MustCreateCertFromFile(cmd.Flag("user-cert").Value.String(), cmd.Flag("user-key").Value.String())
-		certPartBase64, _ := userCert.RawBase64()
-
-		signatureBytes, _ := userCert.Sign(crypto.SHA1, licenseJs)
-		signatureBase64 := base64.StdEncoding.EncodeToString(signatureBytes)
-
-		l := strings.Join([]string{licenseId, licensePartBase64, signatureBase64, certPartBase64}, "-")
-		fmt.Println(l)
+		fmt.Println(licenseCode)
 		return nil
 	},
 }
