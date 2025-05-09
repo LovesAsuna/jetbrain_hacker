@@ -6,7 +6,7 @@ import (
 )
 
 func ReleaseTicket(context *gin.Context) {
-	response, err := NewPingResponse(context)
+	response, err := NewReleaseTicketResponse(context)
 	if err != nil {
 		_ = context.AbortWithError(http.StatusInternalServerError, err)
 		return
