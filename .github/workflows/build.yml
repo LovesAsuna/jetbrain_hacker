@@ -1,6 +1,10 @@
 name: Multi-Platform Build
 
-on: push
+on:
+  push:
+    branches:
+      - 'main'
+      - 'master'
 
 jobs:
   build:

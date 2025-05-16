@@ -10,6 +10,7 @@ import (
 	"github.com/dromara/carbon/v2"
 	"github.com/lovesasuna/sync/coroutinegroup"
 	"github.com/spf13/cobra"
+	"strings"
 )
 
 var generateLicenseCmd = &cobra.Command{
@@ -18,9 +19,21 @@ var generateLicenseCmd = &cobra.Command{
 	Long:  `generate-license.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		licenseId := cmd.Flag("licenseId").Value.String()
-		codes, err := getCodes()
-		if err != nil {
-			return err
+		codes := strings.Split(cmd.Flag("codes").Value.String(), ",")
+		if len(codes) == 0 {
+			var err error
+			codes, err = getCodes()
+			if err != nil {
+				return err
+			}
+		} else {
+			tmpCodes := make([]string, 0, len(codes))
+			for _, code := range codes {
+				if len(code) > 0 {
+					tmpCodes = append(tmpCodes, code)
+				}
+			}
+			codes = tmpCodes
 		}
 		licenseCode, err := license.GenerateLicenseCode(
 			cert.MustCreateCertFromFile(cmd.Flag("user-cert").Value.String(), cmd.Flag("user-key").Value.String()),
@@ -79,8 +92,9 @@ func init() {
 	rootCmd.AddCommand(generateLicenseCmd)
 
 	generateLicenseCmd.Flags().String("licenseId", util.GetRandomString(10), "Id of license.")
-	generateLicenseCmd.Flags().String("name", "user", "The licensee name of license.")
+	generateLicenseCmd.Flags().String("name", "name", "The licensee name of license.")
 	generateLicenseCmd.Flags().String("user", "user", "The assignee name of license.")
 	generateLicenseCmd.Flags().String("email", "i@user.com", "The assignee email of license.")
 	generateLicenseCmd.Flags().String("time", carbon.Now().AddYears(2).SetLayout(carbon.DateLayout).String(), "The expire time of license.")
+	generateLicenseCmd.Flags().String("codes", "", "The product codes of license.")
 }

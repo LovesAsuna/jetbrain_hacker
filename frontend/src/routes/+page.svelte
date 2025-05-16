@@ -13,8 +13,16 @@
     <p><span>It provides a license server for JetBrains IDEs.</span></p>
     <p><span>Documentation:</span></p>
     <ul>
-        <li><p><a href='https://github.com/LovesAsuna/jetbrains_hacker'><span>How to run a license server</span></a>
-        </p></li>
+        <li>
+            <p>
+                <a href='https://github.com/LovesAsuna/jetbrains_hacker'><span>How to run a license server</span></a>
+            </p>
+        </li>
+        <li>
+            <p>
+                <a href='/license' data-sveltekit-reload><span>Get license now!</span></a>
+            </p>
+        </li>
     </ul>
 </div>
 
